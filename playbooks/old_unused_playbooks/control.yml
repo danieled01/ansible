@@ -1,0 +1,10 @@
+---
+- hosts: control
+  become: yes
+  tasks:
+    - name: install tools 
+      apt: name={{ item }} update_cache=yes state=latest
+      with_items:
+        - curl 
+        - git 
+        - python-httplib2

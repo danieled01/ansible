@@ -1,0 +1,34 @@
+- name: install tools
+  apt: name={{ item }} update_cache=yes
+  with_items:
+    - python-httplib2
+
+- name: install nginx
+  apt: name=nginx update_cache=yes
+
+- name: configure nginx site
+  template: src=nginx.conf.j2 dest=/etc/nginx/sites-available/{{ item.key }}
+  with_dict: "{{ sites }}"
+  notify: restart nginx
+
+- name: get active sites
+  shell: ls -1 /etc/nginx/sites-enabled
+  register: active
+
+- name: remove everysite apart from active one 
+  file: path=/etc/nginx/sites-enabled/{{ item }} state=absent
+  with_items: "{{active.stdout_lines}}"
+  when:  item not in sites
+  notify: restart nginx
+
+- name: remove default nginx site
+  file: path=/etc/nginx/sites-enabled/default state=absent
+  notify: restart nginx
+
+- name: link the app site
+  file: src=/etc/nginx/sites-available/{{ item.key }} dest=/etc/nginx/sites-enabled/{{ item.key }} state=link
+  with_dict: "{{ sites }}"
+  notify: restart nginx
+
+- name: starting nginx service and enabling it at startup
+  service: name=nginx state=started enabled=yes

@@ -1,0 +1,19 @@
+---
+- name: install packages
+  apt: name={{ item }} update_cache=yes
+  with_items:
+    - mysql-server
+    - python-mysqldb
+
+- name: Restrict mysql to listen just on eth0
+  lineinfile: dest=/etc/mysql/my.cnf regexp=^bind-address line="bind-address = {{ ansible_eth1.ipv4.address }}"
+  notify: restart mysql
+
+- name: starting mysql service and enabling it at startup
+  service: name=mysql state=started enabled=yes
+
+- name: configure database
+  mysql_db: name={{ db_name }} state=present
+
+- name: create database user
+  mysql_user: name={{ db_user_name }}  password={{ db_user_pass }}  priv=demo.*:ALL host='{{ db_user_host }}' state=present

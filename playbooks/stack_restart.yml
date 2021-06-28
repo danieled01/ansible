@@ -1,0 +1,49 @@
+---
+- hosts: loadbalancer
+  become: yes
+  gather_facts: false
+  tasks:
+    - name: stop loadbalancer services
+      service: name=nginx state=stopped
+
+    - name: wait for port 80 to be drained  
+      wait_for: port=80 state=drained
+
+- hosts: webserver
+  become: yes
+  gather_facts: false
+  tasks:
+    - name: stop webserver services
+      service: name=apache2 state=stopped
+    
+    - name: wait for port 80 to be stopped
+      wait_for: port=80 state=stopped
+
+- hosts: database
+  become: yes
+  tasks:
+    - name: restart database services
+      service: name=mysql state=restarted
+     
+    - name: wait for port 3306 to come back online 
+      wait_for: host={{ ansible_eth1.ipv4.address }} port=3306 state=started
+
+- hosts: webserver
+  become: yes
+  gather_facts: false
+  tasks:
+    - name: start webserver services
+      service: name=apache2 state=started
+      
+    - name: wait for port 80 to be restarted
+      wait_for: port=80 state=started
+
+- hosts: loadbalancer
+  gather_facts: false
+  become: yes
+  tasks:
+    - name: start loadbalancer services
+      service: name=nginx state=started
+      
+    - name: wait for port 80 to be restarted
+      wait_for: port=80 state=started

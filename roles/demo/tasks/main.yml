@@ -1,0 +1,30 @@
+- name: Install apache and dependencies
+  apt: name={{ item }} update_cache=yes
+  with_items:
+    - python-pip
+    - python-virtualenv
+    - python-mysqldb
+
+- name: copy contents of demo app
+  copy: src=/home/vagrant/ansible/demo/app/ dest=/var/www/demo/ mode=0755
+  notify: restart apache2
+
+- name: change the wsgi file using a template
+  template: src=demo.wsgi.j2 dest=/var/www/demo/demo.wsgi mode=0755
+  notify: restart apache2
+
+- name: copy apache2 virtal host config
+  copy: src=/home/vagrant/ansible/demo/ dest=/etc/apache2/sites-available mode=0755
+  notify: restart apache2
+
+- name: set-up python virtual environment
+  pip: requirements=/var/www/demo/requirements.txt virtualenv=/var/www/demo/.venv
+  notify: restart apache2
+
+- name: deactivate default apache site
+  file: path=/etc/apache2/sites-enabled/000-default.conf state=absent
+  notify: restart apache2
+
+- name: activate demo app site
+  file: src=/etc/apache2/sites-available/demo.conf dest=/etc/apache2/sites-enabled/demo.conf state=link
+  notify: restart apache2

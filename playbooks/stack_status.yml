@@ -1,0 +1,80 @@
+---
+- hosts: loadbalancer
+  become: yes
+  gather_facts: false
+  tasks:
+    - name: nginx status
+      shell: service nginx status
+
+    - name: verify ngnix is listening on port 80
+      wait_for: port=80 timeout=1
+
+- hosts: webserver
+  become: yes
+  gather_facts: false
+  tasks:
+    - name: apache2 status
+      shell: service apache2 status
+    
+    - name: verify apache is listening on port 80
+      wait_for: port=80 timeout=1
+
+- hosts: database
+  become: yes
+  tasks:
+    - name: mysql status
+      shell: service mysql status
+
+    - name: verify mysql is listening on port 3306
+      wait_for: host={{ ansible_eth1.ipv4.address }} port=3306 timeout=1
+
+- hosts: control
+  gather_facts: false
+  tasks:
+    - name: check end to end connection from ansible control host to lb
+      uri: url=http://{{ item  }} return_content=yes
+      with_items: 
+        - lb01
+      register: lb_index
+ 
+    - name: fail when
+      fail: msg="index failed to return content"
+      when: '"Hello, from sunny" not in item.content'
+      with_items: "{{ lb_index.results }}"
+
+    - name: check end to end db connection from ansible control host to lb
+      uri: url=http://{{ item  }}/db return_content=yes
+      with_items:
+        - lb01
+      register: lb_db
+
+    - name: fail when
+      fail: msg="index failed to return content"
+      when: '"Database Connected from" not in item.content'
+      with_items: "{{ lb_db.results }}"
+
+
+- hosts: loadbalancer 
+  gather_facts: false
+  tasks:
+    - name: check back-end connection from lb to app servers
+      uri: url=http://{{ item }} return_content=yes
+      with_items: 
+        - app01
+        - app02
+      register: app_index
+
+    - fail: msg="index failed to return content"
+      when: "'Hello, from sunny {{item.item}}' not in item.content"
+      with_items: "{{ app_index.results }}"
+
+    - name: check back-end db connection from lb to app servers
+      uri: url=http://{{ item }}/db return_content=yes
+      with_items:
+        - app01
+        - app02
+      register: db_index
+
+    - fail: msg="index failed to return content"
+      when: '"Database Connected from" not in item.content'
+      with_items: "{{ db_index.results }}"

@@ -1,0 +1,6 @@
+---
+- include: ../roles/control/tests/test.yml
+- include: ../roles/nginx/tests/test.yml
+#- include: ../roles/apache2/tests/test.yml
+- include: ../roles/demo/tests/test.yml
+- include: ../roles/db/tests/test.yml

@@ -1,0 +1,16 @@
+---
+- hosts: all 
+  become: yes
+  gather_facts: false
+  tasks:
+    - name: Update /etc/hostname file
+      lineinfile: dest=/etc/hostname regexp=.* line={{inventory_hostname}} create=yes
+
+#    - name: Update /etc/sysconfig/network file
+#      action: lineinfile dest=/etc/sysconfig/network regexp=^HOSTNAME= line=HOSTNAME={{inventory_hostname}}
+
+    - name: set hostname to current ansible name
+      shell: hostname {{inventory_hostname}}
+ 
+    - name: reboot host
+      shell: reboot
